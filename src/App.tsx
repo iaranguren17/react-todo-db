@@ -1,14 +1,6 @@
-// src/App.tsx
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import './App.css'
-
-// Define what a Todo looks like
-interface Todo {
-  id: number
-  text: string
-}
-
 
 function App() {
   const [todos, setTodos] = useState([])

@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react'
+import type { FormEvent, ChangeEvent } from 'react'
 import { supabase } from './lib/supabaseClient'
 import './App.css'
 
+type Todo = {
+  id: number
+  text: string
+  created_at?: string
+}
+
 function App() {
-  const [todos, setTodos] = useState([])
+  const [todos, setTodos] = useState<Todo[]>([])
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -13,6 +20,7 @@ function App() {
 
   async function fetchTodos() {
     setLoading(true)
+
     const { data, error } = await supabase
       .from('todos')
       .select('*')
@@ -21,12 +29,13 @@ function App() {
     if (error) {
       console.error('Error fetching todos:', error)
     } else {
-      setTodos(data)
+      setTodos((data ?? []) as Todo[])
     }
+
     setLoading(false)
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!inputValue.trim()) return
 
@@ -37,13 +46,13 @@ function App() {
 
     if (error) {
       console.error('Error adding todo:', error)
-    } else {
-      setTodos([...todos, data[0]])
+    } else if (data && data.length > 0) {
+      setTodos([...todos, data[0] as Todo])
       setInputValue('')
     }
   }
 
-  const deleteTodo = async (id) => {
+  const deleteTodo = async (id: number) => {
     const { error } = await supabase
       .from('todos')
       .delete()
@@ -52,8 +61,12 @@ function App() {
     if (error) {
       console.error('Error deleting todo:', error)
     } else {
-      setTodos(todos.filter(todo => todo.id !== id))
+      setTodos(todos.filter((todo) => todo.id !== id))
     }
+  }
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value)
   }
 
   return (
@@ -65,7 +78,7 @@ function App() {
           type="text"
           placeholder="Add a new todo..."
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={handleChange}
         />
         <button type="submit">Add</button>
       </form>
@@ -74,7 +87,7 @@ function App() {
         <p>Loading todos...</p>
       ) : (
         <ul className="todo-list">
-          {todos.map(todo => (
+          {todos.map((todo) => (
             <li key={todo.id} className="todo-item">
               <span>{todo.text}</span>
               <button

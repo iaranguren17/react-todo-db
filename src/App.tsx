@@ -2,28 +2,35 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import Auth from './Auth'
 import './App.css'
+import type { User } from '@supabase/supabase-js'
+
+interface Todo {
+  id: number
+  text: string
+  created_at: string
+  user_id: string
+}
 
 function App() {
-  const [todos, setTodos] = useState([])
+  const [todos, setTodos] = useState<Todo[]>([])
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
 
   useEffect(() => {
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
         setUser(session?.user ?? null)
         setAuthLoading(false)
-
         if (session?.user) {
           fetchTodos()
         } else {
           setTodos([])
         }
-      })
-
-    return () => subscription.unsubscribe()
+      }
+    )
+    return () => subscription?.unsubscribe()
   }, [])
 
   async function fetchTodos() {
@@ -32,38 +39,36 @@ function App() {
       .from('todos')
       .select('*')
       .order('created_at', { ascending: true })
-
     if (error) {
       console.error('Error fetching todos:', error)
     } else {
-      setTodos(data)
+      setTodos(data || [])
     }
     setLoading(false)
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!inputValue.trim()) return
-
     const { data, error } = await supabase
       .from('todos')
       .insert({ text: inputValue.trim() })
       .select()
-
     if (error) {
       console.error('Error adding todo:', error)
     } else {
-      setTodos([...todos, data[0]])
+      if (data && data.length > 0) {
+        setTodos([...todos, data[0]])
+      }
       setInputValue('')
     }
   }
 
-  const deleteTodo = async (id) => {
+  const deleteTodo = async (id: number) => {
     const { error } = await supabase
       .from('todos')
       .delete()
       .eq('id', id)
-
     if (error) {
       console.error('Error deleting todo:', error)
     } else {
@@ -98,7 +103,6 @@ function App() {
           <button onClick={handleSignOut}>Sign Out</button>
         </div>
       </div>
-
       <form className="todo-form" onSubmit={handleSubmit}>
         <input
           type="text"
@@ -108,7 +112,6 @@ function App() {
         />
         <button type="submit">Add</button>
       </form>
-
       {loading ? (
         <p>Loading todos...</p>
       ) : (
@@ -119,7 +122,9 @@ function App() {
               <button
                 className="delete-btn"
                 onClick={() => deleteTodo(todo.id)}
-              >Delete</button>
+              >
+                Delete
+              </button>
             </li>
           ))}
         </ul>
